@@ -16,7 +16,7 @@ class TestHTMLNode(unittest.TestCase):
     def test_propStr(self):
         node = HTMLNode("a", "google.com", props={"href": "https://www.google.com","target": "_blank",})
         self.assertEqual(node.props_to_html(), " href=https://www.google.com target=_blank")
-    
+
     def test_nodeType(self):
         node = HTMLNode("a", "google.com", props={"href": "https://www.google.com","target": "_blank",})
         self.assertIsInstance(node, HTMLNode)

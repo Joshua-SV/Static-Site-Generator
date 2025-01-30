@@ -8,7 +8,7 @@ class HTMLNode:
         self.children = children
         self.props = props # dictionary of html attributes
     
-    def to_html():
+    def to_html(self):
         raise NotImplementedError()
     
     def props_to_html(self):
