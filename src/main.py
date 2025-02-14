@@ -1,25 +1,16 @@
 import textnode
 import leafnode
+import re
+
+import utils
 
 def main():
-    obj = textnode.TextNode("This is a text node", textnode.TextType.IMAGES, "https://www.boot.dev")
+    obj = textnode.TextNode("This is text with a ![rick roll](https://i.imgur.com/aKaOqIh.gif) and ![obi wan](https://i.imgur.com/fJRm4Vk.jpeg) ![](fsaffasf.com)", textnode.TextType.NORMAL)
 
-    def text_node_to_html_node(text_node):
-        match text_node.text_type:
-            case textnode.TextType.NORMAL:
-                return leafnode.LeafNode(None,text_node.text)
-            case textnode.TextType.BOLD:
-                return leafnode.LeafNode('b',text_node.text)
-            case textnode.TextType.ITALIC:
-                return leafnode.LeafNode('i',text_node.text)
-            case textnode.TextType.CODE:
-                return leafnode.LeafNode("code",text_node.text)
-            case textnode.TextType.LINKS:
-                return leafnode.LeafNode('a',text_node.text,{"href": text_node.url, "target": "_blank"})
-            case textnode.TextType.IMAGES:
-                return leafnode.LeafNode("img","",{"src": text_node.url, "alt": text_node.text})
+    
 
-    print(text_node_to_html_node(obj).to_html())
+    #print(split_nodes_delimiter([obj],"`",textnode.TextType.CODE))
+    print(utils.splite_node_images([obj]))
 
 
 if __name__ == "__main__":
