@@ -54,12 +54,10 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
             raise ValueError(f"Unmatched delimiter '{delimiter}' in text: {node.text}")
 
         for i, part in enumerate(text_parts):
-            if part == "":
-                continue  # Skip empty segments caused by consecutive delimiters
-            if i % 2 == 0:
-                new_nodes.append(textnode.TextNode(part, textnode.TextType.NORMAL))  # Normal text
-            else:
-                new_nodes.append(textnode.TextNode(part, text_type))  # Delimited text
+            if part:  # Only append non-empty parts
+                new_nodes.append(
+                    textnode.TextNode(part, text_type if i % 2 else textnode.TextType.NORMAL)
+                )
 
     return new_nodes
 
@@ -93,14 +91,14 @@ def splite_node_images(old_nodes):
                 new_nodes.append(textnode.TextNode(sections.pop(0), textnode.TextType.NORMAL))
                 new_nodes.append(textnode.TextNode(txt, textnode.TextType.IMAGES, url))
 
-        # 
+        # if all links have been extracted then append what is left from the text as a text node
         for sec in sections:
             if sec == "":
                 continue
             else:
                 new_nodes.append(textnode.TextNode(sec, textnode.TextType.NORMAL))
         
-        return new_nodes
+    return new_nodes
 
 def splite_node_links(old_nodes):
     new_nodes = []
@@ -139,5 +137,22 @@ def splite_node_links(old_nodes):
             else:
                 new_nodes.append(textnode.TextNode(sec, textnode.TextType.NORMAL))
         
-        return new_nodes
+    return new_nodes
 
+def text_to_textnodes(text):
+    new_nodes = []
+    # make the raw string text into a text node
+    node = textnode.TextNode(text, textnode.TextType.NORMAL)
+    
+    # Process inline formatting (bold, italic, code)
+    new_nodes = split_nodes_delimiter([node], "**", textnode.TextType.BOLD)
+    new_nodes = split_nodes_delimiter(new_nodes, "*", textnode.TextType.ITALIC)
+    new_nodes = split_nodes_delimiter(new_nodes, "`", textnode.TextType.CODE)
+
+    # finally take care of images and links text
+    new_nodes = splite_node_images(new_nodes)
+    #new_nodes = splite_node_links(new_nodes)
+
+    return new_nodes
+
+print(text_to_textnodes("This is *bold* and *also bold*"))
