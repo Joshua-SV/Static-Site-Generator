@@ -151,8 +151,29 @@ def text_to_textnodes(text):
 
     # finally take care of images and links text
     new_nodes = splite_node_images(new_nodes)
-    #new_nodes = splite_node_links(new_nodes)
+    new_nodes = splite_node_links(new_nodes)
 
     return new_nodes
 
-print(text_to_textnodes("This is *bold* and *also bold*"))
+def markdown_to_blocks(markdown):
+    """Break down the string (full markdown Doc) into seperate blocks which are delimited by two \n\n (newlines)"""
+
+    # strip any leading or trailing blank spaces
+    new_markd = markdown.strip()
+
+    # seperate the string based on two newlines which marks a block
+    lst_blocks = new_markd.split("\n\n")
+    # strip each block encase of newlines or spaces leading or trainling each block
+    lst_blocks = list(map(lambda x: x.strip(), lst_blocks))
+    # filter that only non-empty blocks are in the list of blocks
+    lst_blocks = list(filter(lambda y: y != "", lst_blocks))
+
+    return lst_blocks
+
+print(markdown_to_blocks("""# This is a heading
+
+This is a paragraph of text. It has some **bold** and *italic* words inside of it.
+    
+* This is the first list item in a list block
+* This is a list item
+* This is another list item"""))
