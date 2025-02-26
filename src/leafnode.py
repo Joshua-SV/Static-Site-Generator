@@ -11,6 +11,8 @@ class LeafNode(HTMLNode):
             raise ValueError("All leaf nodes must have a value.")
         if self.tag is None:
             return f"{self.value}"
+        elif self.tag == "img":
+            return f"<{self.tag}{self.props_to_html()}>" 
         elif self.tag != None and isinstance(self.props, dict):
             return f"<{self.tag}{self.props_to_html()}>{self.value}</{self.tag}>"
         
