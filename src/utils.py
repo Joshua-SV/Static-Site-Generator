@@ -350,24 +350,3 @@ def markdown_to_html_node(markdown):
         # get child nodes of main parent
         chidren_nodes.append(block_to_html_parent_node(markdown_block, markdown_type))
     return parentnode.ParentNode(main_parent_node_tag, chidren_nodes)
-
-
-lst = markdown_to_blocks("""# This is a heading
-
-This is a paragraph of text. It has some **bold** and *italic* words inside of it. `code inline` 
-
-* This is the first list item in a list block
-* This is a list item
-* This is another list item""")
-
-print(lst)
-
-node = markdown_to_html_node("""## This is a heading
-
-This is a paragraph of text. It has some **bold** and *italic* words inside of it. `code inline`
-
-1. This is the first list item in a list block **bold text**
-2. This is a list item
-3. This is another list item""")
-
-print(node.to_html())
