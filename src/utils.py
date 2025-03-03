@@ -2,6 +2,8 @@ import textnode
 import leafnode
 import parentnode
 import re
+import os
+import shutil
 from enum import Enum
 
 class BlockType(Enum):
@@ -162,6 +164,7 @@ def text_to_textnodes(text):
     new_nodes = split_nodes_delimiter([node], "**", textnode.TextType.BOLD)
     new_nodes = split_nodes_delimiter(new_nodes, "*", textnode.TextType.ITALIC)
     new_nodes = split_nodes_delimiter(new_nodes, "`", textnode.TextType.CODE)
+    new_nodes = split_nodes_delimiter(new_nodes, "_", textnode.TextType.ITALIC)
 
     # finally take care of images and links text
     new_nodes = splite_node_images(new_nodes)
@@ -242,7 +245,7 @@ def block_to_simple_text(text, type):
             return tag, quote_text # return the tag and the text
         case BlockType.CODE:
             tag = "code"
-            matches = re.findall(r'^\`{3}(.*?)\`{3}$', text) # get the text
+            matches = re.findall(r'\`{3}(.*?)\`{3}', text, re.DOTALL) # get the text
             return tag, matches[0].strip() # return the tag and the text
         case BlockType.UNORDERED:
             tag = "ul"
@@ -350,3 +353,184 @@ def markdown_to_html_node(markdown):
         # get child nodes of main parent
         chidren_nodes.append(block_to_html_parent_node(markdown_block, markdown_type))
     return parentnode.ParentNode(main_parent_node_tag, chidren_nodes)
+
+# function that recursively creates a public directory with folders and subdirectories from a source folder
+def create_public_dir():
+    path_des = "./public/"
+    path_src = "./static/"
+    # check if destination and source directories exist based on current working directory
+    doesDesExist = os.path.exists(path_des) 
+    doesSrcExist = os.path.exists(path_src)
+
+    # if the source folder is not found raise an error
+    if not doesSrcExist:
+        raise Exception("No Source directory called static was found.")
+    # if destination is found then delete it and all its contents
+    if doesDesExist:
+        shutil.rmtree(path_des)
+    # create destination folder with user having full access
+    os.mkdir(path_des, mode=0o755)
+
+    # get initial list of items in the source folder
+    init_lst = os.listdir("static/")
+    # perform recursive to fill des folder with src folder items
+    helper_fill_folder(init_lst, path_src, path_des)
+
+def helper_fill_folder(source_lst, src_path, des_path):
+    for item in source_lst:
+        # if the item is a file then copy it to des folder
+        if os.path.isfile(f"{src_path}/{item}"):
+            shutil.copy(f"{src_path}/{item}",f"{des_path}")
+        # else if it is a folder
+        elif os.path.isdir(f"{src_path}/{item}"):
+            # get its list of items
+            new_src_lst = os.listdir(f"{src_path}/{item}")
+            # create folder in the des folder
+            os.mkdir(f"{des_path}/{item}")
+            # recursively go through the subfolder items
+            helper_fill_folder(new_src_lst, f"{src_path}/{item}", f"{des_path}/{item}")
+    return
+
+def helper_fill_folder_with_html(source_lst, src_path, des_path, template_path):
+    for item in source_lst:
+        # if the item is a file then copy it to des folder
+        if os.path.isfile(f"{src_path}/{item}"):
+            if not (".html" in item.lower()):
+                modified_item = re.sub(r"\.[a-zA-Z]{1,16}$", ".html", item)
+            generate_page(f"{src_path}/{item}", template_path, f"{des_path}/{modified_item}")
+        # else if it is a folder
+        elif os.path.isdir(f"{src_path}/{item}"):
+            # get its list of items
+            new_src_lst = os.listdir(f"{src_path}/{item}")
+            # create folder in the des folder
+            os.mkdir(f"{des_path}/{item}")
+            # recursively go through the subfolder items
+            helper_fill_folder_with_html(new_src_lst, f"{src_path}/{item}", f"{des_path}/{item}", template_path)
+    return
+
+def extract_title(markdown):
+    """Return the first H1 header title with no leading or trailing spaces"""
+    # capture all h1 header titles
+    titles = re.findall(r"# (.*)\s{0,4}", markdown)
+    # use the first one if it exist, stripped of leading spaces or ending spaces
+    if len(titles) >= 1:
+        return titles[0].strip()
+    else:
+        raise Exception("No H1 header was found in the markdown")
+
+def helper_build_des_path(des_path):
+    # if the path exists then jsut return true
+    if os.path.exists(des_path):
+        return True
+        
+    # break up the path
+    des_path_lst = des_path.split("/")
+    build_path = ""
+    # check that each component of the path exists
+    for i,item in enumerate(des_path_lst):
+        # if the item is a potential file with it exists or not
+        if re.search(r".*\.[a-zA-Z]{1,16}", item):
+            build_path += item
+            # make sure a file item is the last item in the list or the path is broken by a file
+            if i == (len(des_path_lst) - 1):
+                return True
+            else:
+                return False
+    
+        # if the component is a single dot or double then ignore
+        if item == "." or item == "" or item == "..":
+            build_path += item + "/"
+            continue
+        elif not os.path.exists(build_path + item):
+            os.mkdir(build_path + item)
+        build_path += item + "/"
+    return True
+
+def generate_page(from_path, template_path, dest_path):
+    """Creates a page"""
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+
+    full_Md_text = None
+    # retrieve the full .md file text from the path given
+    with open(from_path, "r", encoding="utf-8") as fd:
+        full_Md_text = fd.read() 
+
+    template_text = None
+    # retrieve the full template file text from the path given
+    with open(template_path, "r", encoding="utf-8") as fd:
+        template_text = fd.read()
+    
+    # get the html node of full MD text
+    html_node = markdown_to_html_node(full_Md_text)
+    # get the string of the html
+    html_str = html_node.to_html()
+    
+    # get md title text
+    title = extract_title(full_Md_text)
+
+    # Replace the {{ Title }} and {{ Content }} placeholders in the template with title Md and html Md string
+    template_text = template_text.replace("{{ Title }}", title, 1)
+    template_text = template_text.replace("{{ Content }}", html_str, 1)
+
+    if helper_build_des_path(dest_path):
+        with open(dest_path, "w", encoding="utf-8") as fd:
+            fd.write(template_text)
+
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    # get initial list of items in the source folder
+    init_lst = os.listdir(dir_path_content)
+    # use helper recursive function
+    helper_fill_folder_with_html(init_lst, dir_path_content, dest_dir_path, template_path)
+
+
+# lst = markdown_to_blocks("""# Tolkien Fan Club
+
+# ![JRR Tolkien sitting](/images/tolkien.png)
+
+# Here's the deal, **I like Tolkien**.
+
+# > "I am in fact a Hobbit in all but size."
+# >
+# > -- J.R.R. Tolkien
+
+# ## Blog posts
+
+# - [Why Glorfindel is More Impressive than Legolas](/blog/glorfindel)
+# - [Why Tom Bombadil Was a Mistake](/blog/tom)
+# - [The Unparalleled Majesty of "The Lord of the Rings"](/blog/majesty)
+
+# ## Reasons I like Tolkien
+
+# - You can spend years studying the legendarium and still not understand its depths
+# - It can be enjoyed by children and adults alike
+# - Disney _didn't ruin it_ (okay, but Amazon might have)
+# - It created an entirely new genre of fantasy
+
+# ## My favorite characters (in order)
+
+# 1. Gandalf
+# 2. Bilbo
+# 3. Sam
+# 4. Glorfindel
+# 5. Galadriel
+# 6. Elrond
+# 7. Thorin
+# 8. Sauron
+# 9. Aragorn
+
+# Here's what `elflang` looks like (the perfect coding language):
+
+# ```
+# func main(){
+#     fmt.Println("Aiya, Ambar!")
+# }
+# ```
+
+# Want to get in touch? [Contact me here](/contact).
+
+# This site was generated with a custom-built [static site generator](https://www.boot.dev/courses/build-static-site-generator-python) from the course on [Boot.dev](https://www.boot.dev).
+# """)
+
+# for txt in lst:
+#     print(txt)
+#     print(block_to_block_type(txt))
