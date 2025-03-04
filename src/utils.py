@@ -29,7 +29,7 @@ def text_node_to_html_node(text_node):
             case textnode.TextType.CODE:
                 return leafnode.LeafNode("code",text_node.text)
             case textnode.TextType.LINKS:
-                return leafnode.LeafNode('a',text_node.text,{"href": text_node.url, "target": "_blank"})
+                return leafnode.LeafNode('a',text_node.text,{"href": text_node.url, "target": "_self"})
             case textnode.TextType.IMAGES:
                 return leafnode.LeafNode("img","",{"src": text_node.url, "alt": text_node.text})
 
@@ -355,9 +355,9 @@ def markdown_to_html_node(markdown):
     return parentnode.ParentNode(main_parent_node_tag, chidren_nodes)
 
 # function that recursively creates a public directory with folders and subdirectories from a source folder
-def create_public_dir():
-    path_des = "./public/"
-    path_src = "./static/"
+def create_public_dir(dest_path):
+    path_des = dest_path
+    path_src = f"static"
     # check if destination and source directories exist based on current working directory
     doesDesExist = os.path.exists(path_des) 
     doesSrcExist = os.path.exists(path_src)
@@ -372,7 +372,7 @@ def create_public_dir():
     os.mkdir(path_des, mode=0o755)
 
     # get initial list of items in the source folder
-    init_lst = os.listdir("static/")
+    init_lst = os.listdir(f"static")
     # perform recursive to fill des folder with src folder items
     helper_fill_folder(init_lst, path_src, path_des)
 
@@ -391,13 +391,13 @@ def helper_fill_folder(source_lst, src_path, des_path):
             helper_fill_folder(new_src_lst, f"{src_path}/{item}", f"{des_path}/{item}")
     return
 
-def helper_fill_folder_with_html(source_lst, src_path, des_path, template_path):
+def helper_fill_folder_with_html(source_lst, src_path, des_path, template_path, base_path):
     for item in source_lst:
         # if the item is a file then copy it to des folder
         if os.path.isfile(f"{src_path}/{item}"):
             if not (".html" in item.lower()):
                 modified_item = re.sub(r"\.[a-zA-Z]{1,16}$", ".html", item)
-            generate_page(f"{src_path}/{item}", template_path, f"{des_path}/{modified_item}")
+            generate_page(f"{src_path}/{item}", template_path, f"{des_path}/{modified_item}", base_path)
         # else if it is a folder
         elif os.path.isdir(f"{src_path}/{item}"):
             # get its list of items
@@ -405,7 +405,7 @@ def helper_fill_folder_with_html(source_lst, src_path, des_path, template_path):
             # create folder in the des folder
             os.mkdir(f"{des_path}/{item}")
             # recursively go through the subfolder items
-            helper_fill_folder_with_html(new_src_lst, f"{src_path}/{item}", f"{des_path}/{item}", template_path)
+            helper_fill_folder_with_html(new_src_lst, f"{src_path}/{item}", f"{des_path}/{item}", template_path, base_path)
     return
 
 def extract_title(markdown):
@@ -446,9 +446,9 @@ def helper_build_des_path(des_path):
         build_path += item + "/"
     return True
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, BASEPATH):
     """Creates a page"""
-    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+    print(f"Generating page from {from_path} to {dest_path} using {template_path} using base path {BASEPATH}")
 
     full_Md_text = None
     # retrieve the full .md file text from the path given
@@ -472,15 +472,19 @@ def generate_page(from_path, template_path, dest_path):
     template_text = template_text.replace("{{ Title }}", title, 1)
     template_text = template_text.replace("{{ Content }}", html_str, 1)
 
+    # replace instances with base_path
+    template_text = template_text.replace("href=\"/", f"href=\"{BASEPATH}")
+    template_text = template_text.replace("src=\"/", f"src=\"{BASEPATH}")
+
     if helper_build_des_path(dest_path):
         with open(dest_path, "w", encoding="utf-8") as fd:
             fd.write(template_text)
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, base_path):
     # get initial list of items in the source folder
     init_lst = os.listdir(dir_path_content)
     # use helper recursive function
-    helper_fill_folder_with_html(init_lst, dir_path_content, dest_dir_path, template_path)
+    helper_fill_folder_with_html(init_lst, dir_path_content, dest_dir_path, template_path, base_path)
 
 
 # lst = markdown_to_blocks("""# Tolkien Fan Club
